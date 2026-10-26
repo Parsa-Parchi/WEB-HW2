@@ -85,3 +85,29 @@ Using the generic URI structure `scheme://[userinfo@]host[:port]/path?query#frag
 The colon after `ss` ends the scheme, and `//` introduces the authority. The `@` separates user information from the host. The colon after the hostname introduces the port, while `#` starts the fragment. The two exclamation marks belong to the user-information value; they do not separate URL components. The fragment is interpreted by the client rather than forming part of the server address.
 
 This is a structural decomposition of the supplied example. The generic URI syntax treats user information as one component and does not itself require a username/password meaning. Actual Shadowsocks share-link formats have scheme-specific rules, commonly involving an encryption method and password, so this decomposition alone does not establish that the example is a valid working Shadowsocks configuration.
+
+## Question 5: Choosing HTTP status codes for REST API scenarios
+
+### 5.1 The database is unavailable and login requests cannot be processed
+
+**`503 Service Unavailable`** is appropriate if the database outage is temporary and prevents the login service from operating. The failure is on the service side, rather than evidence of invalid credentials. A `Retry-After` header can indicate when a retry is appropriate if that time is known. **`500 Internal Server Error`** is another reasonable choice for an unexpected internal database failure when the application cannot characterize it as temporary unavailability. I would choose `503` for a known temporary outage.
+
+### 5.2 The supplied username does not exist and login fails
+
+**`401 Unauthorized`** is appropriate when login fails because valid authentication credentials have not been supplied. Return a generic message such as "Invalid username or password" rather than revealing whether the account exists. A `401` response must include a `WWW-Authenticate` challenge appropriate to the API's authentication scheme. **`400 Bad Request`** is an alternative for an API that explicitly models rejected credentials as invalid input to a custom login operation; under that contract, the status and message should be consistent for both unknown usernames and incorrect passwords. I would use `401` when the API follows HTTP authentication semantics, rather than `404`, since the missing entity is an account supplied in the login data, not the login endpoint itself.
+
+### 5.3 The website has permanently moved to another domain
+
+**`308 Permanent Redirect`**, with a `Location` header containing the new URL, is a suitable choice for a REST API because it preserves the request method and body during automatic redirection. **`301 Moved Permanently`** also expresses a permanent move and is common for ordinary website pages, but clients may change a redirected `POST` into a `GET`. I would choose `308` for API routes where preserving the method matters, and `301` can be suitable for normal `GET` pages. The redirect should point to the corresponding resource on the new domain.
+
+### 5.4 The user has exceeded the allowed request rate
+
+**`429 Too Many Requests`** specifically indicates that the client has sent too many requests within the applicable rate-limit period. The response should explain the limit and can include `Retry-After` to indicate how long to wait before retrying. This is more precise than a generic `503`, because the stated problem is this user's request rate rather than general service unavailability.
+
+### 5.5 JWT renewal succeeds and the renewed token is returned in a header
+
+**`204 No Content`** is suitable if the renewed token is returned only in a response header and there is no response body. It indicates successful processing; headers can still carry response metadata. **`200 OK`** is also reasonable, especially when the endpoint returns a JSON body containing token information. I would choose `204` under the stated header-only assumption and use the API's documented header for the token. A `204` response must not include a response body.
+
+### 5.6 The user's IP range is blocked from accessing the service
+
+**`403 Forbidden`** is appropriate when an access policy denies requests from the user's IP range, even if the request is otherwise valid. Authenticating again does not by itself remove this restriction, so `401` is not the best fit. **`451 Unavailable For Legal Reasons`** would be appropriate only if a legal restriction is actually the reason for blocking access; a geographic or IP-based block alone does not establish that. I would use `403` for the stated IP-range policy without additional evidence of a legal requirement.

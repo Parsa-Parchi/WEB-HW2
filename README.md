@@ -26,3 +26,17 @@ The main reasons for this design are:
 - **Easier transport evolution:** Implementing QUIC over widely supported UDP allows transport improvements in applications without requiring changes to TCP implementations in operating systems. UDP is not guaranteed to be allowed on every network, so clients may need to fall back to TCP-based HTTP versions.
 
 Using UDP alone would not provide these features. The benefit comes from QUIC's design on top of UDP, rather than from removing reliability or security.
+
+## Question 2: Stateful and stateless communication
+
+### 2.1 What is the difference between stateful and stateless communication?
+
+In **stateful** communication, the server retains conversational or session context between requests, and later requests can depend on that context. In **stateless** communication, each request can be understood independently using the information it carries, without relying on earlier requests in the conversation. Statelessness does not mean that the server cannot store resources or use a database; it concerns the interaction's dependence on remembered client context.
+
+### 2.2 Which category does HTTP belong to, and how do web applications manage state?
+
+HTTP is **stateless**: the protocol does not automatically remember that separate requests belong to a previously authenticated user or shopping session. Applications that need this continuity add state-management mechanisms, commonly **cookies and server-side sessions**.
+
+After a successful login, the application can create a session record on the server and send its unpredictable identifier in a `Set-Cookie` response header. The browser stores the cookie and includes it in later matching requests through the `Cookie` header. The server uses that identifier to look up the session and recognize the user, allowing features such as remaining logged in or maintaining a shopping cart. The cookie can hold just the identifier rather than the full session data.
+
+Another approach is for the client to send an authentication token with each request, commonly in the `Authorization` header. A self-contained signed token can carry claims the server verifies without looking up a traditional session record, although applications may still keep state for revocation or other purposes. Both approaches supply application-level context explicitly; neither changes HTTP's stateless semantics. Reusing a persistent TCP or QUIC connection also does not, by itself, make HTTP stateful.

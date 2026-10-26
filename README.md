@@ -58,3 +58,30 @@ In ordinary HTTP, the client initiates a request and the server sends a response
 **WebSocket:** The client establishes a connection through a handshake, traditionally an HTTP/1.1 upgrade. After establishment, both endpoints can send messages independently over a persistent, full-duplex channel without a new HTTP request for each message. This suits interactive chat with frequent traffic in both directions. WebSocket is a separate protocol rather than an ordinary HTTP response stream; applications must manage authentication, connection health, reconnection, and any required message replay.
 
 **Webhooks:** A receiving application registers a reachable callback URL with an event provider. When an event occurs, the provider sends a new HTTP request, usually `POST`, to that URL. This preserves HTTP's request-response model: the event provider acts as the HTTP client, while the callback endpoint acts as the server. Webhooks suit server-to-server notifications, such as payment alerts or repository events; a normal browser tab is not a publicly reachable callback server. A backend can receive a webhook and then notify browsers through SSE or WebSocket. Receivers should authenticate deliveries and handle possible retries and duplicates.
+
+## Question 4: Identifying URL components
+
+### 4.1 What are the components of the given URL?
+
+```text
+ss://asghar:1234!!@ss.myproxy.com:1234#shadowSocks1
+```
+
+Using the generic URI structure `scheme://[userinfo@]host[:port]/path?query#fragment`:
+
+| Component | Value | Explanation |
+| --- | --- | --- |
+| Scheme | `ss` | Identifies the scheme associated with Shadowsocks links; this is not an HTTP URL. |
+| Authority | `asghar:1234!!@ss.myproxy.com:1234` | Contains the user information, host, and port. |
+| User information | `asghar:1234!!` | The part before `@`. Under the conventional `username:password` interpretation, the username is `asghar` and the password is `1234!!`. |
+| Host | `ss.myproxy.com` | The complete server hostname; `myproxy.com` is the domain and `ss` is its subdomain. |
+| Port | `1234` | The explicit server port after the hostname's colon. |
+| Path | Empty | No path appears after the authority. |
+| Query | Absent | There is no `?` component. |
+| Fragment | `shadowSocks1` | The value after `#`, excluding the delimiter itself; a client can use it as a display label. |
+
+### 4.2 How do the delimiters separate these parts?
+
+The colon after `ss` ends the scheme, and `//` introduces the authority. The `@` separates user information from the host. The colon after the hostname introduces the port, while `#` starts the fragment. The two exclamation marks belong to the user-information value; they do not separate URL components. The fragment is interpreted by the client rather than forming part of the server address.
+
+This is a structural decomposition of the supplied example. The generic URI syntax treats user information as one component and does not itself require a username/password meaning. Actual Shadowsocks share-link formats have scheme-specific rules, commonly involving an encryption method and password, so this decomposition alone does not establish that the example is a valid working Shadowsocks configuration.

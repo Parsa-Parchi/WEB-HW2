@@ -111,3 +111,19 @@ This is a structural decomposition of the supplied example. The generic URI synt
 ### 5.6 The user's IP range is blocked from accessing the service
 
 **`403 Forbidden`** is appropriate when an access policy denies requests from the user's IP range, even if the request is otherwise valid. Authenticating again does not by itself remove this restriction, so `401` is not the best fit. **`451 Unavailable For Legal Reasons`** would be appropriate only if a legal restriction is actually the reason for blocking access; a geographic or IP-based block alone does not establish that. I would use `403` for the stated IP-range policy without additional evidence of a legal requirement.
+
+## Question 6: Identifying proxy types
+
+### 6.1 University servers used to obtain packages instead of contacting central package servers directly
+
+**Type: Forward proxy, specifically a caching forward proxy if downloaded packages are cached.** It acts on behalf of university clients: their package requests go through the university intermediary to external package servers. Cached packages can be reused for later requests, reducing external bandwidth use and download time. The defining feature is that the proxy represents the requesting clients when accessing outside servers.
+
+If the university server instead hosts a synchronized copy of a package repository and students configure that repository as their package source, it is more precisely a **repository mirror**, rather than necessarily a forward proxy. Under the question's proxy interpretation, the intended classification is a caching forward proxy.
+
+### 6.2 Distributing requests according to their geographic origin
+
+**Type: Reverse proxy performing geographic routing or load balancing.** It sits in front of the service's backend servers, accepts incoming client requests, and selects a backend or region based on the client's geographic origin. This can reduce latency and direct traffic to suitable regional infrastructure. It represents the service's servers rather than the clients, which makes it a reverse proxy. If the routing decision is made only through geographic DNS responses, that is DNS-based routing rather than a proxy itself; the reverse-proxy classification assumes the intermediary actually receives and forwards the requests.
+
+### 6.3 Adding authentication to a very old service
+
+**Type: Authenticating reverse proxy.** It is placed in front of the legacy service and checks authentication before forwarding allowed requests to it. This adds an access-control layer without requiring authentication support to be implemented inside the old application. The legacy service should accept traffic only through the trusted proxy so users cannot bypass the authentication check by contacting it directly. Any identity headers forwarded to the backend must be supplied by the trusted proxy rather than accepted unchecked from clients.
